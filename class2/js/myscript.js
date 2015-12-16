@@ -2,7 +2,11 @@ var canvas, ctx;
 var circles = [];
 var selectedCircle;
 var hoveredCircle;
-
+var direction=1;
+var speed=2;
+var state;
+var button;
+var moving=false;
 // --------------------------------------------
 
 // objects :
@@ -11,6 +15,16 @@ function Circle(x,y,radius){
     this.x = x;
     this.y = y;
     this.radius = radius;
+}
+
+function Button(x,y,w,h,state,image){
+    this.x=x;
+    this.y=y;
+    this.w=w;
+    this.h=h;
+    this.state=state;
+    this.imageShift=0;
+    this.image=image;
 }
 
 function clear(){
@@ -25,9 +39,25 @@ function drawCircle(x,y,radius){
         ctx.fill();
 }
 
+function animation(speed){
+        circles[0].x-=speed;
+        circles[0].y-=speed;
+        circles[1].x+=speed;
+        circles[1].y-=speed;
+        circles[2].x+=speed;
+        circles[2].y+=speed;
+        circles[3].x-=speed;
+        circles[3].y+=speed;
+}
 
 function drawScene(){
     clear();
+
+    //draw text
+    ctx.font = '42px DS-Digital';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('Rocker Canvas Learning Trip', ctx.canvas.width/2, 50);
 
     //draw lines
     var bg_gradient = ctx.createLinearGradient(0, 200, 0, 400);
@@ -48,24 +78,57 @@ function drawScene(){
     ctx.fillStyle=bg_gradient;
     ctx.fill();
 
+    if(moving){
+        if(direction){ //速度正方向
+            if(circles[0].x<width/3){
+                direction=0;
+            } else {
+                animation(speed);
+            }
+        } 
+        else {  //速度反方向
+            if(circles[0].x>(width/2-15)){
+                direction=1;
+            } else {
+                animation(-speed);
+            }
+        }
+    }
+
     //draw circle
     for (var i=0;i<circles.length;i++){
         drawCircle(circles[i].x,circles[i].y,hoveredCircle==i?circleRadius*1.3:circleRadius);
     }
 
+    //draw button && text
+    ctx.drawImage(button.image,0,button.imageShift,button.w,button.h,button.x,button.y,button.w,button.h);
+    ctx.font = '30px DS-Digital';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(moving?'Play':'Pause', 135, 480);
+    ctx.fillText(button.state, 135, 515);
+
 }
 
 $(function(){
-    var circleCounts=7;
     canvas = document.getElementById('scene');
     ctx = canvas.getContext('2d');
     width=canvas.width;
     height=canvas.height;
     circleRadius=15;
 
-    for(var i = 0; i < circleCounts; i++){
-        circles.push(new Circle(Math.random()*width,Math.random()*height,circleRadius));
+   //initial 4 balls
+    circles.push(new Circle(width/2-30,height/2-30,circleRadius));
+    circles.push(new Circle(width/2+30,height/2-30,circleRadius));
+    circles.push(new Circle(width/2+30,height/2+30,circleRadius));
+    circles.push(new Circle(width/2-30,height/2+30,circleRadius));
+
+    //inital button
+    buttonImage = new Image();
+    buttonImage.src = 'images/button.png';
+    buttonImage.onload = function(){
+        button=new Button(50,450,180,120,'normal',this);
     }
+    
 
     console.log(circles);
 
@@ -82,6 +145,13 @@ $(function(){
                 selectedCircle=i;
                 break;
             }
+        }
+
+        // button behavior
+        if (mouseX > button.x && mouseX < button.x+button.w && mouseY > button.y && mouseY < button.y+button.h) {
+            moving=!moving;
+            button.state = 'pressed';
+            button.imageShift = 262;
         }
     });
 
@@ -108,13 +178,37 @@ $(function(){
         }
         //如果经过红点就放大
         //如果有有选中就可以拖拉，改变它的位置，然后全部重新画
+
+        if (mouseX > button.x && mouseX < button.x+button.w && mouseY > button.y && mouseY < button.y+button.h) {
+            button.state = 'hover';
+            button.imageShift = 131;
+        } else {
+            button.state = 'normal';
+            button.imageShift = 0;
+        }
+
     });
 
-    $("#scene").mouseup(function(){
+    $("#scene").mouseup(function(e){
+        var mouseX = e.offsetX || 0;
+        var mouseY = e.offsetY || 0;
+
         //取消选中
         selectedCircle=undefined;
+
+        if (mouseX > button.x && mouseX < button.x+button.w && mouseY > button.y && mouseY < button.y+button.h) {
+            button.state = 'hover';
+            button.imageShift = 131;
+        }
     });
 
     setInterval(drawScene,30);
 
 });
+
+/*
+总结：
+源码有些不到位的地方，我自己加了修复：
+1.动画的反转判断
+2.button的状态显示
+*/
